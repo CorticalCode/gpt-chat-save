@@ -1,0 +1,38 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+Icon
+.fseventsd
+.TemporaryItems
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Build artifacts
+artifacts/
+*.xpi
+*.zip
+*-source.zip
+web-ext-artifacts/
+
+# Node (if using for tooling)
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Local documentation
+docs/
