@@ -43,14 +43,15 @@ function calculateScale(width, height, maxWidth, maxHeight) {
 
 /**
  * Determine if an image should be skipped
- * Skips: data URLs (already embedded), tiny images (icons)
+ * Skips: data URLs (already embedded), tiny images (icons), decorative images
  * 
  * @param {string} src - Image source URL
  * @param {number} width - Image width in pixels
  * @param {number} height - Image height in pixels
+ * @param {HTMLImageElement} img - The image element (optional, for class checking)
  * @returns {boolean} True if image should be skipped
  */
-function shouldSkipImage(src, width, height) {
+function shouldSkipImage(src, width, height, img = null) {
   // Already a data URL - no processing needed
   if (src.startsWith('data:')) {
     return true;
@@ -58,6 +59,13 @@ function shouldSkipImage(src, width, height) {
   // Too small - likely a UI icon
   if (width < MIN_IMAGE_SIZE || height < MIN_IMAGE_SIZE) {
     return true;
+  }
+  // Check for decorative/duplicate images (ChatGPT uses blur-2xl for background effects)
+  if (img) {
+    const parentClasses = img.parentElement?.className || '';
+    if (parentClasses.includes('blur-')) {
+      return true;
+    }
   }
   return false;
 }
@@ -200,8 +208,8 @@ function waitForLoad(img) {
 async function processImage(img, preset = 'medium') {
   const originalSrc = img.src;
   
-  // Check if should skip
-  if (shouldSkipImage(originalSrc, img.naturalWidth, img.naturalHeight)) {
+  // Check if should skip (pass img element for class checking)
+  if (shouldSkipImage(originalSrc, img.naturalWidth, img.naturalHeight, img)) {
     return createImageResult.skipped(originalSrc);
   }
 
@@ -239,16 +247,27 @@ async function processAllImages(container, preset = 'medium') {
   }
 
   const images = Array.from(container.querySelectorAll('img'));
+  const processedSrcs = new Set(); // Track already processed image URLs
   
   for (const img of images) {
+    // Skip duplicate images (same src already processed)
+    const srcKey = img.src.split('?')[0]; // Ignore query params for deduplication
+    if (processedSrcs.has(srcKey)) {
+      img.remove(); // Remove duplicate
+      stats.skipped++;
+      continue;
+    }
+    
     const result = await processImage(img, preset);
     
     if (result.skipped) {
+      img.remove(); // Remove skipped images (blurred backgrounds, etc.)
       stats.skipped++;
     } else if (result.success) {
       img.src = result.dataUrl;
       img.removeAttribute('srcset');
       img.classList.add('exported-image');
+      processedSrcs.add(srcKey); // Mark this src as processed
       stats.processed++;
     } else {
       // Failed - add placeholder with fallback link

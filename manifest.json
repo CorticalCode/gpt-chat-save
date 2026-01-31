@@ -6,7 +6,8 @@
   "homepage_url": "https://github.com/CorticalCode/gpt-chat-save",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "https://chatgpt.com/*"
   ],
   "content_security_policy": "script-src 'self'; object-src 'self'",
   "browser_action": {

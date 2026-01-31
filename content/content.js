@@ -378,6 +378,7 @@ async function processArticle(article, imageQuality = 'medium') {
 
   // Remove UI elements that shouldn't be exported
   const clone = article.cloneNode(true);
+  
   clone.querySelectorAll(SELECTORS.productsWidget).forEach(el => el.remove());
   clone.querySelectorAll(SELECTORS.closedPopover).forEach(el => el.remove());
   clone.querySelectorAll(SELECTORS.screenReaderOnly).forEach(el => el.remove());
@@ -410,8 +411,7 @@ async function processArticle(article, imageQuality = 'medium') {
   // Process images if images.js is loaded
   if (typeof processAllImages !== 'undefined') {
     try {
-      const imageStats = await processAllImages(tempDiv, imageQuality);
-      console.log('GPT Chat Save: Image processing stats', imageStats);
+      await processAllImages(tempDiv, imageQuality);
     } catch (error) {
       console.warn('GPT Chat Save: Image processing failed', error);
     }
@@ -499,11 +499,9 @@ async function convertToHTML(selectedTheme = 'auto', imageQuality = 'medium') {
       return { success: false, error: 'Could not find the conversation. Make sure you are on a ChatGPT chat page.' };
     }
 
-    // Try data attribute selector first (more stable), fall back to article elements
-    let articles = main.querySelectorAll(SELECTORS.messageByRole);
-    if (!articles.length) {
-      articles = main.querySelectorAll(SELECTORS.messageArticle);
-    }
+    // Use article elements - they contain both text messages AND image containers
+    // Note: [data-message-author-role] misses image-only articles
+    const articles = main.querySelectorAll(SELECTORS.messageArticle);
     if (!articles.length) {
       return { success: false, error: 'No messages found in this conversation.' };
     }
