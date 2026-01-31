@@ -19,9 +19,8 @@ const MIN_IMAGE_SIZE = 50;
  * @type {Object.<string, {maxWidth: number, maxHeight: number, quality: number}|null>}
  */
 const IMAGE_PRESETS = {
-  small:  { maxWidth: 500,  maxHeight: 375, quality: 0.75 },
-  medium: { maxWidth: 800,  maxHeight: 600, quality: 0.85 },
-  none:   null  // Strip images entirely
+  include: { maxWidth: 800, maxHeight: 600, quality: 0.85 },
+  none:    null  // Strip images entirely
 };
 
 /**
@@ -230,17 +229,47 @@ async function processImage(img, preset = 'medium') {
  * @param {string} preset - Quality preset ('high', 'medium', 'low', 'none')
  * @returns {Promise<{processed: number, failed: number, skipped: number}>}
  */
-async function processAllImages(container, preset = 'medium') {
+async function processAllImages(container, preset = 'include') {
   const stats = { processed: 0, failed: 0, skipped: 0 };
   
-  // Handle 'none' preset - strip all images
+  // Handle 'none' preset - strip all images and their UI containers
   if (preset === 'none' || !IMAGE_PRESETS[preset]) {
-    container.querySelectorAll('img').forEach(img => {
-      const placeholder = document.createElement('span');
-      placeholder.className = 'image-placeholder';
-      placeholder.textContent = img.alt || '[Image removed]';
-      img.replaceWith(placeholder);
-      stats.skipped++;
+    // Find image gallery containers (DALL-E generated images)
+    // These have multiple images with captions like "Generated image"
+    const images = container.querySelectorAll('img');
+    const processedContainers = new Set();
+    
+    images.forEach(img => {
+      // Try to find the gallery container - look for parent with multiple images
+      // or the immediate wrapper around DALL-E images
+      let parent = img.parentElement;
+      let galleryContainer = null;
+      
+      // Walk up to find a container that holds the image gallery
+      for (let i = 0; i < 5 && parent; i++) {
+        const siblingImgs = parent.querySelectorAll('img');
+        if (siblingImgs.length > 1) {
+          galleryContainer = parent;
+        }
+        parent = parent.parentElement;
+      }
+      
+      if (galleryContainer && !processedContainers.has(galleryContainer)) {
+        // Replace entire gallery with single placeholder
+        const placeholder = document.createElement('p');
+        placeholder.className = 'image-placeholder';
+        placeholder.textContent = '[Images removed]';
+        galleryContainer.replaceWith(placeholder);
+        processedContainers.add(galleryContainer);
+        stats.skipped++;
+      } else if (!galleryContainer) {
+        // Single image - just replace it
+        const placeholder = document.createElement('span');
+        placeholder.className = 'image-placeholder';
+        placeholder.textContent = '[Image removed]';
+        img.replaceWith(placeholder);
+        stats.skipped++;
+      }
     });
     return stats;
   }

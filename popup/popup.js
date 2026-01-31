@@ -106,8 +106,14 @@ function loadPreferences() {
     if (result.exportTheme) {
       themeSelect.value = result.exportTheme;
     }
-    if (result.imageQuality) {
-      imageSelect.value = result.imageQuality;
+    // Default to 'include' - also handles stale values from old presets
+    const imageValue = result.imageQuality;
+    if (imageValue === 'include' || imageValue === 'none') {
+      imageSelect.value = imageValue;
+    } else {
+      imageSelect.value = 'include';
+      // Clear stale value from storage
+      chrome.storage.sync.set({ imageQuality: 'include' });
     }
   });
 }

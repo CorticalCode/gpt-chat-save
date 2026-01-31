@@ -364,12 +364,58 @@ function generateHTMLTemplate(title, colors, theme) {
 }
 
 /**
+ * Strip DALL-E image generation UI text from container
+ * Used when exporting without images to remove orphaned captions
+ * @param {HTMLElement} container - DOM element to clean
+ */
+function stripImageUIText(container) {
+  // Text patterns that indicate DALL-E/image generation UI
+  const uiTextPatterns = ['Generated image', 'Share', 'Image created'];
+  
+  // Get all elements and check text content
+  const allElements = container.querySelectorAll('*');
+  const toRemove = [];
+  
+  allElements.forEach(el => {
+    const text = el.textContent?.trim();
+    if (!text) return;
+    
+    // Check if element's text matches any UI pattern
+    for (const pattern of uiTextPatterns) {
+      if (text === pattern || text.startsWith(pattern + ' ')) {
+        // Only remove if this element is a leaf or its content IS the UI text
+        // (avoid removing parents that contain other content)
+        if (el.children.length === 0 || el.textContent?.trim() === text) {
+          toRemove.push(el);
+          break;
+        }
+      }
+    }
+  });
+  
+  // Remove matched elements (in reverse to avoid parent issues)
+  toRemove.reverse().forEach(el => {
+    // Don't remove if already removed (parent was removed)
+    if (el.parentNode) {
+      el.remove();
+    }
+  });
+  
+  // Clean up empty elements left behind
+  container.querySelectorAll('p, span, div').forEach(el => {
+    if (!el.textContent?.trim() && !el.querySelector('img')) {
+      el.remove();
+    }
+  });
+}
+
+/**
  * Sanitize and process article content
  * @param {HTMLElement} article - Article element to process
- * @param {string} imageQuality - Image quality preset ('high', 'medium', 'low', 'none')
+ * @param {string} imageQuality - Image quality preset ('include', 'none')
  * @returns {Promise<string>} Processed HTML content
  */
-async function processArticle(article, imageQuality = 'medium') {
+async function processArticle(article, imageQuality = 'include') {
   if (typeof DOMPurify === 'undefined') {
     throw new Error('DOMPurify library not loaded. Try refreshing the page.');
   }
@@ -415,6 +461,11 @@ async function processArticle(article, imageQuality = 'medium') {
     } catch (error) {
       console.warn('GPT Chat Save: Image processing failed', error);
     }
+  }
+  
+  // If no images mode, strip DALL-E UI text remnants (always run, even if no images found)
+  if (imageQuality === 'none') {
+    stripImageUIText(tempDiv);
   }
 
   // Apply syntax highlighting to code blocks

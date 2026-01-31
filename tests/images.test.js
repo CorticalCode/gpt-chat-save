@@ -15,16 +15,8 @@ import {
 } from '../content/images.js';
 
 describe('IMAGE_PRESETS', () => {
-  it('has small preset with correct dimensions', () => {
-    expect(IMAGE_PRESETS.small).toEqual({
-      maxWidth: 500,
-      maxHeight: 375,
-      quality: 0.75
-    });
-  });
-
-  it('has medium preset with correct dimensions', () => {
-    expect(IMAGE_PRESETS.medium).toEqual({
+  it('has include preset with correct dimensions', () => {
+    expect(IMAGE_PRESETS.include).toEqual({
       maxWidth: 800,
       maxHeight: 600,
       quality: 0.85
@@ -113,33 +105,27 @@ describe('shouldSkipImage', () => {
 
 describe('getScaledDimensions', () => {
   it('returns original dimensions for small images', () => {
-    const dims = getScaledDimensions(400, 300, 'medium');
+    const dims = getScaledDimensions(400, 300, 'include');
     expect(dims).toEqual({ width: 400, height: 300 });
   });
 
-  it('scales large images to fit medium preset', () => {
-    const dims = getScaledDimensions(1600, 1200, 'medium');
+  it('scales large images to fit include preset', () => {
+    const dims = getScaledDimensions(1600, 1200, 'include');
     // 1600x1200 with max 800x600
     // Scale = 0.5 (limited by both dimensions equally)
     expect(dims).toEqual({ width: 800, height: 600 });
   });
 
   it('maintains aspect ratio for wide images', () => {
-    const dims = getScaledDimensions(2000, 500, 'medium');
+    const dims = getScaledDimensions(2000, 500, 'include');
     // Width limited: 800/2000 = 0.4, height = 500*0.4 = 200
     expect(dims).toEqual({ width: 800, height: 200 });
   });
 
   it('maintains aspect ratio for tall images', () => {
-    const dims = getScaledDimensions(300, 1200, 'medium');
+    const dims = getScaledDimensions(300, 1200, 'include');
     // Height limited: 600/1200 = 0.5, width = 300*0.5 = 150
     expect(dims).toEqual({ width: 150, height: 600 });
-  });
-
-  it('uses small preset dimensions', () => {
-    const dims = getScaledDimensions(1000, 750, 'small');
-    // 1000x750 with max 500x375 = scale 0.5
-    expect(dims).toEqual({ width: 500, height: 375 });
   });
 
   it('returns null for none preset', () => {
