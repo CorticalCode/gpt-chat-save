@@ -15,11 +15,11 @@ import {
 } from '../content/images.js';
 
 describe('IMAGE_PRESETS', () => {
-  it('has high preset with correct dimensions', () => {
-    expect(IMAGE_PRESETS.high).toEqual({
-      maxWidth: 1200,
-      maxHeight: 900,
-      quality: 0.90
+  it('has small preset with correct dimensions', () => {
+    expect(IMAGE_PRESETS.small).toEqual({
+      maxWidth: 500,
+      maxHeight: 375,
+      quality: 0.75
     });
   });
 
@@ -28,14 +28,6 @@ describe('IMAGE_PRESETS', () => {
       maxWidth: 800,
       maxHeight: 600,
       quality: 0.85
-    });
-  });
-
-  it('has low preset with correct dimensions', () => {
-    expect(IMAGE_PRESETS.low).toEqual({
-      maxWidth: 500,
-      maxHeight: 375,
-      quality: 0.75
     });
   });
 
@@ -144,14 +136,8 @@ describe('getScaledDimensions', () => {
     expect(dims).toEqual({ width: 150, height: 600 });
   });
 
-  it('uses high preset dimensions', () => {
-    const dims = getScaledDimensions(2400, 1800, 'high');
-    // 2400x1800 with max 1200x900 = scale 0.5
-    expect(dims).toEqual({ width: 1200, height: 900 });
-  });
-
-  it('uses low preset dimensions', () => {
-    const dims = getScaledDimensions(1000, 750, 'low');
+  it('uses small preset dimensions', () => {
+    const dims = getScaledDimensions(1000, 750, 'small');
     // 1000x750 with max 500x375 = scale 0.5
     expect(dims).toEqual({ width: 500, height: 375 });
   });

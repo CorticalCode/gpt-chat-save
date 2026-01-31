@@ -19,9 +19,8 @@ const MIN_IMAGE_SIZE = 50;
  * @type {Object.<string, {maxWidth: number, maxHeight: number, quality: number}|null>}
  */
 const IMAGE_PRESETS = {
-  high:   { maxWidth: 1200, maxHeight: 900, quality: 0.90 },
+  small:  { maxWidth: 500,  maxHeight: 375, quality: 0.75 },
   medium: { maxWidth: 800,  maxHeight: 600, quality: 0.85 },
-  low:    { maxWidth: 500,  maxHeight: 375, quality: 0.75 },
   none:   null  // Strip images entirely
 };
 
