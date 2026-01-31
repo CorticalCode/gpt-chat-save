@@ -62,12 +62,79 @@ function shouldSkipImage(src, width, height) {
   return false;
 }
 
+/**
+ * Get scaled dimensions for an image based on preset
+ * 
+ * @param {number} width - Original image width
+ * @param {number} height - Original image height
+ * @param {string} preset - Preset name ('high', 'medium', 'low', 'none')
+ * @returns {{width: number, height: number}|null} Scaled dimensions or null if preset is 'none'/invalid
+ */
+function getScaledDimensions(width, height, preset) {
+  const config = IMAGE_PRESETS[preset];
+  if (!config) {
+    return null;
+  }
+  
+  const scale = calculateScale(width, height, config.maxWidth, config.maxHeight);
+  return {
+    width: Math.round(width * scale),
+    height: Math.round(height * scale)
+  };
+}
+
+/**
+ * Factory for creating standardized image processing results
+ */
+const createImageResult = {
+  /**
+   * Create a success result
+   * @param {string} dataUrl - The base64 data URL
+   * @param {string} originalSrc - Original image source
+   */
+  success(dataUrl, originalSrc) {
+    return {
+      success: true,
+      dataUrl,
+      originalSrc
+    };
+  },
+
+  /**
+   * Create a skipped result (image didn't need processing)
+   * @param {string} dataUrl - The original data URL
+   */
+  skipped(dataUrl) {
+    return {
+      success: true,
+      skipped: true,
+      dataUrl
+    };
+  },
+
+  /**
+   * Create an error result with fallback
+   * @param {string} error - Error message
+   * @param {string} originalSrc - Original image source (used as fallback)
+   */
+  error(error, originalSrc) {
+    return {
+      success: false,
+      error,
+      originalSrc,
+      fallbackUrl: originalSrc
+    };
+  }
+};
+
 // Export for testing (ES modules / Node)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { 
     IMAGE_PRESETS, 
     calculateScale, 
     shouldSkipImage,
+    getScaledDimensions,
+    createImageResult,
     MIN_IMAGE_SIZE
   };
 }

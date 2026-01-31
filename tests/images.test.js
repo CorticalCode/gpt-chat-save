@@ -5,11 +5,13 @@
  * TDD: Starting with pure functions, no DOM dependencies
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { 
   IMAGE_PRESETS, 
   calculateScale, 
-  shouldSkipImage 
+  shouldSkipImage,
+  getScaledDimensions,
+  createImageResult
 } from '../content/images.js';
 
 describe('IMAGE_PRESETS', () => {
@@ -114,5 +116,83 @@ describe('shouldSkipImage', () => {
   it('does not skip images at exactly the threshold', () => {
     const result = shouldSkipImage('https://example.com/small.png', 50, 50);
     expect(result).toBe(false);
+  });
+});
+
+describe('getScaledDimensions', () => {
+  it('returns original dimensions for small images', () => {
+    const dims = getScaledDimensions(400, 300, 'medium');
+    expect(dims).toEqual({ width: 400, height: 300 });
+  });
+
+  it('scales large images to fit medium preset', () => {
+    const dims = getScaledDimensions(1600, 1200, 'medium');
+    // 1600x1200 with max 800x600
+    // Scale = 0.5 (limited by both dimensions equally)
+    expect(dims).toEqual({ width: 800, height: 600 });
+  });
+
+  it('maintains aspect ratio for wide images', () => {
+    const dims = getScaledDimensions(2000, 500, 'medium');
+    // Width limited: 800/2000 = 0.4, height = 500*0.4 = 200
+    expect(dims).toEqual({ width: 800, height: 200 });
+  });
+
+  it('maintains aspect ratio for tall images', () => {
+    const dims = getScaledDimensions(300, 1200, 'medium');
+    // Height limited: 600/1200 = 0.5, width = 300*0.5 = 150
+    expect(dims).toEqual({ width: 150, height: 600 });
+  });
+
+  it('uses high preset dimensions', () => {
+    const dims = getScaledDimensions(2400, 1800, 'high');
+    // 2400x1800 with max 1200x900 = scale 0.5
+    expect(dims).toEqual({ width: 1200, height: 900 });
+  });
+
+  it('uses low preset dimensions', () => {
+    const dims = getScaledDimensions(1000, 750, 'low');
+    // 1000x750 with max 500x375 = scale 0.5
+    expect(dims).toEqual({ width: 500, height: 375 });
+  });
+
+  it('returns null for none preset', () => {
+    const dims = getScaledDimensions(800, 600, 'none');
+    expect(dims).toBeNull();
+  });
+
+  it('returns null for invalid preset', () => {
+    const dims = getScaledDimensions(800, 600, 'invalid');
+    expect(dims).toBeNull();
+  });
+});
+
+describe('createImageResult', () => {
+  it('creates success result with data URL', () => {
+    const result = createImageResult.success('data:image/jpeg;base64,abc', 'https://orig.com/img.jpg');
+    expect(result).toEqual({
+      success: true,
+      dataUrl: 'data:image/jpeg;base64,abc',
+      originalSrc: 'https://orig.com/img.jpg'
+    });
+  });
+
+  it('creates skipped result', () => {
+    const result = createImageResult.skipped('data:image/png;base64,xyz');
+    expect(result).toEqual({
+      success: true,
+      skipped: true,
+      dataUrl: 'data:image/png;base64,xyz'
+    });
+  });
+
+  it('creates error result with fallback', () => {
+    const result = createImageResult.error('CORS blocked', 'https://blocked.com/img.jpg');
+    expect(result).toEqual({
+      success: false,
+      error: 'CORS blocked',
+      originalSrc: 'https://blocked.com/img.jpg',
+      fallbackUrl: 'https://blocked.com/img.jpg'
+    });
   });
 });
