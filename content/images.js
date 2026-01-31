@@ -138,3 +138,127 @@ if (typeof module !== 'undefined' && module.exports) {
     MIN_IMAGE_SIZE
   };
 }
+
+// ============================================================================
+// Browser-only functions (require DOM/Canvas)
+// ============================================================================
+
+/**
+ * Resize image using Canvas and convert to base64 data URL
+ * BROWSER ONLY - requires document.createElement
+ * 
+ * @param {HTMLImageElement} img - Loaded image element
+ * @param {string} preset - Quality preset name
+ * @returns {string} Base64 data URL
+ * @throws {Error} If canvas operations fail (e.g., CORS)
+ */
+function resizeAndEncode(img, preset = 'medium') {
+  const config = IMAGE_PRESETS[preset];
+  if (!config) {
+    throw new Error(`Invalid preset: ${preset}`);
+  }
+
+  const dims = getScaledDimensions(img.naturalWidth, img.naturalHeight, preset);
+  
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  canvas.width = dims.width;
+  canvas.height = dims.height;
+  
+  ctx.drawImage(img, 0, 0, dims.width, dims.height);
+  
+  // This throws if image is cross-origin without CORS headers
+  return canvas.toDataURL('image/jpeg', config.quality);
+}
+
+/**
+ * Wait for an image to fully load
+ * BROWSER ONLY
+ * 
+ * @param {HTMLImageElement} img - Image element
+ * @returns {Promise<void>} Resolves when loaded, rejects on error
+ */
+function waitForLoad(img) {
+  if (img.complete && img.naturalWidth > 0) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = () => reject(new Error('Image failed to load'));
+  });
+}
+
+/**
+ * Process a single image element
+ * BROWSER ONLY
+ * 
+ * @param {HTMLImageElement} img - Image element to process
+ * @param {string} preset - Quality preset name
+ * @returns {Promise<Object>} Result object from createImageResult
+ */
+async function processImage(img, preset = 'medium') {
+  const originalSrc = img.src;
+  
+  // Check if should skip
+  if (shouldSkipImage(originalSrc, img.naturalWidth, img.naturalHeight)) {
+    return createImageResult.skipped(originalSrc);
+  }
+
+  try {
+    await waitForLoad(img);
+    const dataUrl = resizeAndEncode(img, preset);
+    return createImageResult.success(dataUrl, originalSrc);
+  } catch (error) {
+    console.warn('GPT Chat Save: Image processing failed', error.message);
+    return createImageResult.error(error.message, originalSrc);
+  }
+}
+
+/**
+ * Process all images in a container
+ * BROWSER ONLY
+ * 
+ * @param {HTMLElement} container - DOM element containing images
+ * @param {string} preset - Quality preset ('high', 'medium', 'low', 'none')
+ * @returns {Promise<{processed: number, failed: number, skipped: number}>}
+ */
+async function processAllImages(container, preset = 'medium') {
+  const stats = { processed: 0, failed: 0, skipped: 0 };
+  
+  // Handle 'none' preset - strip all images
+  if (preset === 'none' || !IMAGE_PRESETS[preset]) {
+    container.querySelectorAll('img').forEach(img => {
+      const placeholder = document.createElement('span');
+      placeholder.className = 'image-placeholder';
+      placeholder.textContent = img.alt || '[Image removed]';
+      img.replaceWith(placeholder);
+      stats.skipped++;
+    });
+    return stats;
+  }
+
+  const images = Array.from(container.querySelectorAll('img'));
+  
+  for (const img of images) {
+    const result = await processImage(img, preset);
+    
+    if (result.skipped) {
+      stats.skipped++;
+    } else if (result.success) {
+      img.src = result.dataUrl;
+      img.removeAttribute('srcset');
+      img.classList.add('exported-image');
+      stats.processed++;
+    } else {
+      // Failed - add placeholder with fallback link
+      const wrapper = document.createElement('span');
+      wrapper.className = 'image-error';
+      wrapper.innerHTML = `[Image could not be embedded - <a href="${result.fallbackUrl}" target="_blank">view original</a>]`;
+      img.replaceWith(wrapper);
+      stats.failed++;
+    }
+  }
+
+  return stats;
+}
