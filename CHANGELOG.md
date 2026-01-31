@@ -5,6 +5,22 @@ All notable changes to GPT Chat Save will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-01-31
+
+### Added
+- **Image Export**: DALL-E generations and uploaded images now included in exports
+- Images automatically resized and converted to embedded base64 (portable, no external dependencies)
+- Quality presets: High (1200px), Medium (800px, default), Low (500px), or None
+- Graceful CORS fallback: blocked images show placeholder with link to original
+- New `images.js` module for image processing
+- 27 unit tests for image module (59 total)
+
+### Changed
+- `processArticle()` and `convertToHTML()` now async for image processing
+- DOMPurify config now allows `img` tags with `src` and `alt` attributes
+- Popup UI includes image quality dropdown
+- Image preference saved to browser storage
+
 ## [1.0.0] - 2025-01-31
 
 ### Changed
