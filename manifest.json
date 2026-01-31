@@ -25,6 +25,7 @@
         "lib/purify.min.js",
         "lib/highlight.min.js",
         "content/utils.js",
+        "content/images.js",
         "content/content.js"
       ],
       "run_at": "document_idle"

@@ -14,6 +14,8 @@
 const exportButton = document.getElementById('exportBtn');
 const themeSelect = document.getElementById('themeSelect');
 const themeLabel = document.querySelector('label[for="themeSelect"]');
+const imageSelect = document.getElementById('imageSelect');
+const imageLabel = document.querySelector('label[for="imageSelect"]');
 const statusDiv = document.getElementById('status');
 
 // Guard against double-clicks and concurrent exports
@@ -27,11 +29,15 @@ function updateUI(isValidPage) {
     exportButton.style.display = 'block';
     themeSelect.style.display = 'block';
     themeLabel.style.display = 'block';
+    imageSelect.style.display = 'block';
+    imageLabel.style.display = 'block';
     statusDiv.textContent = '';
   } else {
     exportButton.style.display = 'none';
     themeSelect.style.display = 'none';
     themeLabel.style.display = 'none';
+    imageSelect.style.display = 'none';
+    imageLabel.style.display = 'none';
     showNotOnChatGPT();
   }
 }
@@ -92,13 +98,16 @@ function showSuccess(messageCount) {
  * Load saved preferences
  */
 function loadPreferences() {
-  chrome.storage.sync.get(['exportTheme'], (result) => {
+  chrome.storage.sync.get(['exportTheme', 'imageQuality'], (result) => {
     if (chrome.runtime.lastError) {
       console.warn('GPT Chat Save: Failed to load preferences', chrome.runtime.lastError);
       return;
     }
     if (result.exportTheme) {
       themeSelect.value = result.exportTheme;
+    }
+    if (result.imageQuality) {
+      imageSelect.value = result.imageQuality;
     }
   });
 }
@@ -108,6 +117,17 @@ function loadPreferences() {
  */
 themeSelect.addEventListener('change', () => {
   chrome.storage.sync.set({ exportTheme: themeSelect.value }, () => {
+    if (chrome.runtime.lastError) {
+      console.warn('GPT Chat Save: Failed to save preference', chrome.runtime.lastError);
+    }
+  });
+});
+
+/**
+ * Save image quality preference
+ */
+imageSelect.addEventListener('change', () => {
+  chrome.storage.sync.set({ imageQuality: imageSelect.value }, () => {
     if (chrome.runtime.lastError) {
       console.warn('GPT Chat Save: Failed to save preference', chrome.runtime.lastError);
     }
@@ -161,6 +181,7 @@ exportButton.addEventListener('click', () => {
   exportInProgress = true;
 
   const selectedTheme = themeSelect.value;
+  const selectedImageQuality = imageSelect.value;
 
   // Disable button and show progress
   exportButton.disabled = true;
@@ -187,13 +208,15 @@ exportButton.addEventListener('click', () => {
         const scripts = [
           'lib/purify.min.js',
           'lib/highlight.min.js',
+          'content/utils.js',
+          'content/images.js',
           'content/content.js'
         ];
         injectScripts(tab.id, scripts, () => {
-          sendExportMessage(tab.id, selectedTheme);
+          sendExportMessage(tab.id, selectedTheme, selectedImageQuality);
         });
       } else if (response?.status === 'ok') {
-        sendExportMessage(tab.id, selectedTheme);
+        sendExportMessage(tab.id, selectedTheme, selectedImageQuality);
       } else {
         showError('Content script not responding correctly');
       }
@@ -204,10 +227,11 @@ exportButton.addEventListener('click', () => {
 /**
  * Send export message to content script
  */
-function sendExportMessage(tabId, theme) {
+function sendExportMessage(tabId, theme, imageQuality) {
   chrome.tabs.sendMessage(tabId, {
     action: 'convert_to_html',
-    theme: theme
+    theme: theme,
+    imageQuality: imageQuality
   }, (response) => {
     if (chrome.runtime.lastError) {
       showError('Failed to communicate with page: ' + chrome.runtime.lastError.message);

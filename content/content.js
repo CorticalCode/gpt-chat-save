@@ -38,6 +38,7 @@ const SELECTORS = {
 
 // Note: escapeHtml, sanitizeFilename, formatDateCompact, getThemeColors
 // are loaded from utils.js (see manifest.json content_scripts order)
+// processAllImages is loaded from images.js
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'ping') {
@@ -45,8 +46,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return;
   }
   if (request.action === 'convert_to_html') {
-    const result = convertToHTML(request.theme);
-    sendResponse(result);
+    // Handle async conversion
+    convertToHTML(request.theme, request.imageQuality)
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
     return true; // Indicates async response
   }
 });
@@ -313,6 +316,39 @@ function generateHTMLTemplate(title, colors, theme) {
     .hljs-variable { color: #f8f8f2; }
     .hljs-type { color: #8be9fd; }
 
+    /* Images */
+    .message img,
+    .message .exported-image {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 12px 0;
+      display: block;
+    }
+
+    .image-error {
+      display: inline-block;
+      padding: 12px 16px;
+      background: rgba(255, 100, 100, 0.1);
+      border: 1px dashed rgba(255, 100, 100, 0.3);
+      border-radius: 8px;
+      font-style: italic;
+    }
+
+    .image-error a {
+      color: inherit;
+      text-decoration: underline;
+    }
+
+    .image-placeholder {
+      display: inline-block;
+      padding: 8px 12px;
+      background: rgba(128, 128, 128, 0.1);
+      border-radius: 4px;
+      font-style: italic;
+      opacity: 0.7;
+    }
+
     @media print {
       .message { break-inside: avoid; }
     }
@@ -329,8 +365,11 @@ function generateHTMLTemplate(title, colors, theme) {
 
 /**
  * Sanitize and process article content
+ * @param {HTMLElement} article - Article element to process
+ * @param {string} imageQuality - Image quality preset ('high', 'medium', 'low', 'none')
+ * @returns {Promise<string>} Processed HTML content
  */
-function processArticle(article) {
+async function processArticle(article, imageQuality = 'medium') {
   if (typeof DOMPurify === 'undefined') {
     throw new Error('DOMPurify library not loaded. Try refreshing the page.');
   }
@@ -343,19 +382,19 @@ function processArticle(article) {
   clone.querySelectorAll(SELECTORS.closedPopover).forEach(el => el.remove());
   clone.querySelectorAll(SELECTORS.screenReaderOnly).forEach(el => el.remove());
 
-  // Sanitize with DOMPurify - strict whitelist
+  // Sanitize with DOMPurify - strict whitelist (now includes img)
   tempDiv.innerHTML = DOMPurify.sanitize(clone.innerHTML, {
     ALLOWED_TAGS: [
       'p', 'code', 'pre', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
       'ul', 'ol', 'li', 'strong', 'em', 'blockquote',
       'table', 'thead', 'tbody', 'tr', 'td', 'th', 'hr',
-      'a', 'br'  // Links and line breaks
+      'a', 'br', 'img'  // Links, line breaks, and images
     ],
-    ALLOWED_ATTR: ['class', 'href', 'target', 'rel']
+    ALLOWED_ATTR: ['class', 'href', 'target', 'rel', 'src', 'alt']
   });
 
-  // Strip remaining non-essential attributes (keep class and link attributes)
-  const allowedAttrs = ['class', 'href', 'target', 'rel'];
+  // Strip remaining non-essential attributes (keep class, link, and image attributes)
+  const allowedAttrs = ['class', 'href', 'target', 'rel', 'src', 'alt'];
   tempDiv.querySelectorAll('*').forEach(element => {
     const attrs = Array.from(element.attributes);
     attrs.forEach(attr => {
@@ -367,6 +406,16 @@ function processArticle(article) {
 
   // Remove any remaining interactive elements
   tempDiv.querySelectorAll(SELECTORS.interactive).forEach(el => el.remove());
+
+  // Process images if images.js is loaded
+  if (typeof processAllImages !== 'undefined') {
+    try {
+      const imageStats = await processAllImages(tempDiv, imageQuality);
+      console.log('GPT Chat Save: Image processing stats', imageStats);
+    } catch (error) {
+      console.warn('GPT Chat Save: Image processing failed', error);
+    }
+  }
 
   // Apply syntax highlighting to code blocks
   if (typeof hljs === 'undefined') {
@@ -430,8 +479,11 @@ function detectTheme() {
 /**
  * Main conversion function
  * Returns { success: true } or { success: false, error: string }
+ * @param {string} selectedTheme - Theme selection ('auto', 'light', 'dark')
+ * @param {string} imageQuality - Image quality preset ('high', 'medium', 'low', 'none')
+ * @returns {Promise<Object>} Result object
  */
-function convertToHTML(selectedTheme = 'auto') {
+async function convertToHTML(selectedTheme = 'auto', imageQuality = 'medium') {
   try {
     // Check if ChatGPT is still streaming
     if (isStreaming()) {
@@ -465,18 +517,19 @@ function convertToHTML(selectedTheme = 'auto') {
     // Array.push() is O(1), vs string += which copies entire string each time
     const htmlParts = [generateHTMLTemplate(document.title, colors, theme)];
 
-    // Process each message
-    articles.forEach((article, index) => {
+    // Process each message (now async for image processing)
+    for (let index = 0; index < articles.length; index++) {
+      const article = articles[index];
       const isUser = isUserMessage(article, index);
       const messageClass = isUser ? 'user-message' : 'assistant-message';
-      const content = processArticle(article);
+      const content = await processArticle(article, imageQuality);
 
       htmlParts.push(`
     <div class="message ${messageClass}">
       <div class="content">${content}</div>
     </div>
 `);
-    });
+    }
 
     // Close HTML
     htmlParts.push(`
