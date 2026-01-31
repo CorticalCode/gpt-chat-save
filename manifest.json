@@ -1,0 +1,42 @@
+{
+  "manifest_version": 2,
+  "name": "GPT Chat Save",
+  "version": "1.0.0",
+  "description": "Save your ChatGPT conversations as clean, styled HTML files.",
+  "homepage_url": "https://github.com/CorticalCode/gpt-chat-save",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "content_security_policy": "script-src 'self'; object-src 'self'",
+  "browser_action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "128": "icons/icon.png"
+    }
+  },
+  "icons": {
+    "128": "icons/icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*"],
+      "js": [
+        "lib/purify.min.js",
+        "lib/highlight.min.js",
+        "content/utils.js",
+        "content/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "gpt-chat-save@corticalcode.github.io",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  }
+}
