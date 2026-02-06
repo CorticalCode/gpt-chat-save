@@ -38,6 +38,7 @@ These libraries are included as-is from their official distributions. No modific
 ## Features
 
 - **One-click export** - Export the current ChatGPT conversation to HTML
+- **Image export** - DALL-E generations and uploaded images embedded as base64 (portable, no external dependencies)
 - **Theme support** - Auto-detect theme or force light/dark mode
 - **Syntax highlighting** - Code blocks are highlighted using highlight.js
 - **Privacy-focused** - All processing happens locally, no data leaves your browser
@@ -59,8 +60,9 @@ These libraries are included as-is from their official distributions. No modific
 1. Navigate to a ChatGPT conversation at [chatgpt.com](https://chatgpt.com)
 2. Click the extension icon in your toolbar
 3. Select a theme (or leave on Auto)
-4. Click "Export to HTML"
-5. The HTML file will download automatically
+4. Choose image handling (Include or Don't include)
+5. Click "Export to HTML"
+6. The HTML file will download automatically
 
 ## Security
 
@@ -93,13 +95,16 @@ gpt-chat-save/
 ├── manifest.json        # Extension manifest
 ├── popup/
 │   ├── popup.html       # Popup UI
-│   ├── popup.css        # Popup styles  
+│   ├── popup.css        # Popup styles
 │   └── popup.js         # Popup logic
 ├── content/
-│   └── content.js       # Content script (runs on chatgpt.com)
+│   ├── content.js       # Content script (runs on chatgpt.com)
+│   ├── images.js        # Image processing (resize, base64, CORS fallback)
+│   └── utils.js         # Pure utility functions
 ├── lib/
 │   ├── purify.min.js    # DOMPurify for HTML sanitization
 │   └── highlight.min.js # Syntax highlighting
+├── tests/               # Unit tests (vitest)
 └── icons/
     └── icon.png         # Extension icon
 ```
