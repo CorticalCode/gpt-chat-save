@@ -5,6 +5,13 @@ All notable changes to GPT Chat Save will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-02-05
+
+### Fixed
+- DALL-E image UI text ("Generated image" x5, "Share") no longer leaks into exports
+- Moved interactive element removal and DALL-E container removal to pre-DOMPurify stage
+- Removed broken `stripImageUIText()` post-DOMPurify approach (5 failed attempts)
+
 ## [1.1.0] - 2026-01-31
 
 ### Added
