@@ -17,10 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Image Export**: DALL-E generations and uploaded images now included in exports
 - Images automatically resized and converted to embedded base64 (portable, no external dependencies)
-- Quality presets: High (1200px), Medium (800px, default), Low (500px), or None
+- Quality presets: Include (800px, embedded base64) or None (strip images)
 - Graceful CORS fallback: blocked images show placeholder with link to original
 - New `images.js` module for image processing
-- 27 unit tests for image module (59 total)
+- Unit tests for image module and popup (64 total)
 
 ### Changed
 - `processArticle()` and `convertToHTML()` now async for image processing

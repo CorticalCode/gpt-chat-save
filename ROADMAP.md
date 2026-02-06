@@ -77,16 +77,6 @@ const htmlContent = parts.join('');  // Single string allocation
 
 ## Potential Features
 
-### Image Export
-
-Currently images (DALL-E, uploads, canvas) are stripped. Options:
-
-1. **Inline base64** - Large file sizes but portable
-2. **External URLs** - Smaller files but may expire
-3. **Placeholder text** - `[Image removed]`
-
-Requires careful security review for `src` attribute filtering.
-
 ### Manifest V3 Migration
 
 When Firefox makes MV3 mandatory (no timeline announced), migration needed:
@@ -98,6 +88,8 @@ When Firefox makes MV3 mandatory (no timeline announced), migration needed:
 
 ## Completed
 
+- [x] v1.1.1 - DALL-E UI text leak fix (pre-DOMPurify element removal)
+- [x] v1.1.0 - Image export (embedded base64, CORS fallback, quality presets)
 - [x] v1.0.0 - Memory optimization (array join instead of string concatenation)
 - [x] v0.3.0 - Async response handling, link preservation, streaming detection
 - [x] v0.2.0 - Selector documentation, error handling, theme detection
