@@ -41,40 +41,6 @@ async function processMessagesInBatches(articles, batchSize = 50) {
 
 ---
 
-### Memory Exhaustion on Large Exports
-
-**Problem:** String concatenation builds entire HTML in memory before creating Blob. JavaScript strings are immutable, so each `htmlContent +=` creates a new string.
-
-**Symptoms:**
-- Memory spikes during export
-- Tab may crash on extremely long conversations (1000+ messages)
-- Combined with `cloneNode(true)` for each article, memory usage doubles
-
-**Solution:** Array accumulation + join
-
-```javascript
-// Instead of:
-let htmlContent = '';
-articles.forEach(article => {
-  htmlContent += processArticle(article);  // Creates new string each time
-});
-
-// Use:
-const parts = [generateHTMLTemplate(...)];
-articles.forEach(article => {
-  parts.push(processArticle(article));  // Array push is O(1) amortized
-});
-const htmlContent = parts.join('');  // Single string allocation
-```
-
-**Additional considerations:**
-- Add warning for conversations over ~500 messages
-- Consider streaming to Blob directly (more complex)
-
-**Effort:** Low (array join), Medium (streaming)
-
----
-
 ## Potential Features
 
 ### Manifest V3 Migration
