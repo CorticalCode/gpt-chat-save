@@ -2,7 +2,7 @@
 
 Future improvements and known limitations for GPT Chat Save.
 
-## v6.0 - Performance (Future)
+## Performance (Future)
 
 ### Browser Freeze on Long Conversations
 
@@ -75,7 +75,7 @@ const htmlContent = parts.join('');  // Single string allocation
 
 ---
 
-## v6.x - Potential Features
+## Potential Features
 
 ### Image Export
 
@@ -86,10 +86,6 @@ Currently images (DALL-E, uploads, canvas) are stripped. Options:
 3. **Placeholder text** - `[Image removed]`
 
 Requires careful security review for `src` attribute filtering.
-
-### RTL Language Support
-
-Add `dir="auto"` to HTML output for proper Arabic/Hebrew rendering.
 
 ### Manifest V3 Migration
 
@@ -102,5 +98,7 @@ When Firefox makes MV3 mandatory (no timeline announced), migration needed:
 
 ## Completed
 
-- [x] v5.2.0 - Selector documentation, error handling, theme detection
-- [x] v5.3.0 - Async response handling, link preservation, streaming detection
+- [x] v1.0.0 - Memory optimization (array join instead of string concatenation)
+- [x] v0.3.0 - Async response handling, link preservation, streaming detection
+- [x] v0.2.0 - Selector documentation, error handling, theme detection
+- [x] RTL language support - Not needed, browser handles Unicode bidirectional automatically
