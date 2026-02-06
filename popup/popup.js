@@ -260,5 +260,12 @@ function sendExportMessage(tabId, theme, imageQuality) {
   });
 }
 
+// Listen for export progress updates from content script
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.action === 'export_progress' && exportInProgress) {
+    showStatus(`Exporting... ${message.processed}/${message.total}`);
+  }
+});
+
 // Initialize
 loadPreferences();

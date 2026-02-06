@@ -73,8 +73,38 @@ function getThemeColors(theme) {
   };
 }
 
+/**
+ * Process items in batches, yielding to the event loop between batches
+ * @param {Array} items - Items to process
+ * @param {Function} processItem - Async function(item, index) returning a result
+ * @param {Object} [options]
+ * @param {number} [options.batchSize=10] - Items per batch
+ * @param {Function} [options.onProgress] - Called with (processed, total) after each batch
+ * @param {Function} [options.yieldFn] - Yield function between batches (default: setTimeout(0))
+ * @returns {Promise<Array>} Results in original order
+ */
+async function processInBatches(items, processItem, options = {}) {
+  const batchSize = options.batchSize || 10;
+  const onProgress = options.onProgress || null;
+  const yieldFn = options.yieldFn || (() => new Promise(resolve => setTimeout(resolve, 0)));
+  const total = items.length;
+  const results = [];
+
+  for (let i = 0; i < total; i += batchSize) {
+    const end = Math.min(i + batchSize, total);
+    for (let j = i; j < end; j++) {
+      results.push(await processItem(items[j], j));
+    }
+    await yieldFn();
+    if (onProgress) {
+      onProgress(end, total);
+    }
+  }
+  return results;
+}
+
 // Export for testing (ES modules)
 // In browser context, these are global functions
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { escapeHtml, sanitizeFilename, formatDateCompact, getThemeColors };
+  module.exports = { escapeHtml, sanitizeFilename, formatDateCompact, getThemeColors, processInBatches };
 }
