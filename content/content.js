@@ -31,7 +31,9 @@ const SELECTORS = {
   closedPopover: 'span[data-state="closed"]',         // Collapsed tooltips/popovers
   screenReaderOnly: '[class="sr-only"]',              // Accessibility-only text
   // Interactive elements to remove (keep img for potential future use):
-  interactive: 'button, input, select, textarea, [role="button"]',
+  interactive: 'button:not([disabled]), input, select, textarea, [role="button"]',
+  // DALL-E image containers (id="image-{uuid}"):
+  dalleImageContainer: 'div[id^="image-"]',
   // Code blocks for syntax highlighting:
   codeBlocks: 'pre code, code[class*="language-"]'
 };
@@ -364,52 +366,6 @@ function generateHTMLTemplate(title, colors, theme) {
 }
 
 /**
- * Strip DALL-E image generation UI text from container
- * Used when exporting without images to remove orphaned captions
- * @param {HTMLElement} container - DOM element to clean
- */
-function stripImageUIText(container) {
-  // Text patterns that indicate DALL-E/image generation UI
-  const uiTextPatterns = ['Generated image', 'Share', 'Image created'];
-  
-  // Get all elements and check text content
-  const allElements = container.querySelectorAll('*');
-  const toRemove = [];
-  
-  allElements.forEach(el => {
-    const text = el.textContent?.trim();
-    if (!text) return;
-    
-    // Check if element's text matches any UI pattern
-    for (const pattern of uiTextPatterns) {
-      if (text === pattern || text.startsWith(pattern + ' ')) {
-        // Only remove if this element is a leaf or its content IS the UI text
-        // (avoid removing parents that contain other content)
-        if (el.children.length === 0 || el.textContent?.trim() === text) {
-          toRemove.push(el);
-          break;
-        }
-      }
-    }
-  });
-  
-  // Remove matched elements (in reverse to avoid parent issues)
-  toRemove.reverse().forEach(el => {
-    // Don't remove if already removed (parent was removed)
-    if (el.parentNode) {
-      el.remove();
-    }
-  });
-  
-  // Clean up empty elements left behind
-  container.querySelectorAll('p, span, div').forEach(el => {
-    if (!el.textContent?.trim() && !el.querySelector('img')) {
-      el.remove();
-    }
-  });
-}
-
-/**
  * Sanitize and process article content
  * @param {HTMLElement} article - Article element to process
  * @param {string} imageQuality - Image quality preset ('include', 'none')
@@ -424,10 +380,16 @@ async function processArticle(article, imageQuality = 'include') {
 
   // Remove UI elements that shouldn't be exported
   const clone = article.cloneNode(true);
-  
+
   clone.querySelectorAll(SELECTORS.productsWidget).forEach(el => el.remove());
   clone.querySelectorAll(SELECTORS.closedPopover).forEach(el => el.remove());
   clone.querySelectorAll(SELECTORS.screenReaderOnly).forEach(el => el.remove());
+  clone.querySelectorAll(SELECTORS.interactive).forEach(el => el.remove());
+
+  // Remove DALL-E image containers in 'none' mode (before DOMPurify orphans their text)
+  if (imageQuality === 'none') {
+    clone.querySelectorAll(SELECTORS.dalleImageContainer).forEach(el => el.remove());
+  }
 
   // Sanitize with DOMPurify - strict whitelist (now includes img)
   tempDiv.innerHTML = DOMPurify.sanitize(clone.innerHTML, {
@@ -451,9 +413,6 @@ async function processArticle(article, imageQuality = 'include') {
     });
   });
 
-  // Remove any remaining interactive elements
-  tempDiv.querySelectorAll(SELECTORS.interactive).forEach(el => el.remove());
-
   // Process images if images.js is loaded
   if (typeof processAllImages !== 'undefined') {
     try {
@@ -461,11 +420,6 @@ async function processArticle(article, imageQuality = 'include') {
     } catch (error) {
       console.warn('GPT Chat Save: Image processing failed', error);
     }
-  }
-  
-  // If no images mode, strip DALL-E UI text remnants (always run, even if no images found)
-  if (imageQuality === 'none') {
-    stripImageUIText(tempDiv);
   }
 
   // Apply syntax highlighting to code blocks
