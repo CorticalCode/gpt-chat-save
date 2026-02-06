@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "GPT Chat Save",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Save your ChatGPT conversations as clean, styled HTML files.",
   "homepage_url": "https://github.com/CorticalCode/gpt-chat-save",
   "permissions": [

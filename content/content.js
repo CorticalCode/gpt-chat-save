@@ -520,19 +520,28 @@ async function convertToHTML(selectedTheme = 'auto', imageQuality = 'medium') {
     // Array.push() is O(1), vs string += which copies entire string each time
     const htmlParts = [generateHTMLTemplate(document.title, colors, theme)];
 
-    // Process each message (now async for image processing)
-    for (let index = 0; index < articles.length; index++) {
-      const article = articles[index];
-      const isUser = isUserMessage(article, index);
-      const messageClass = isUser ? 'user-message' : 'assistant-message';
-      const content = await processArticle(article, imageQuality);
-
-      htmlParts.push(`
+    // Process each message in batches to prevent browser freeze on long conversations
+    const messageParts = await processInBatches(
+      Array.from(articles),
+      async (article, index) => {
+        const isUser = isUserMessage(article, index);
+        const messageClass = isUser ? 'user-message' : 'assistant-message';
+        const content = await processArticle(article, imageQuality);
+        return `
     <div class="message ${messageClass}">
       <div class="content">${content}</div>
     </div>
-`);
-    }
+`;
+      },
+      {
+        onProgress(processed, total) {
+          try {
+            chrome.runtime.sendMessage({ action: 'export_progress', processed, total });
+          } catch (e) { /* popup may be closed */ }
+        }
+      }
+    );
+    htmlParts.push(...messageParts);
 
     // Close HTML
     htmlParts.push(`
