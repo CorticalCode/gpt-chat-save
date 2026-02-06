@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 
 // Import functions directly (we'll read from utils.js)
 // Since utils.js uses CommonJS exports for Node compatibility
-const { escapeHtml, sanitizeFilename, formatDateCompact, getThemeColors } = await import('../content/utils.js');
+const { escapeHtml, sanitizeFilename, formatDateCompact, getThemeColors, processInBatches } = await import('../content/utils.js');
 
 describe('escapeHtml', () => {
   it('escapes ampersands', () => {
@@ -168,5 +168,80 @@ describe('getThemeColors', () => {
     expect(colors).toHaveProperty('blockquoteBorder');
     expect(colors).toHaveProperty('codeBlockBorder');
     expect(colors).toHaveProperty('codeBlockBackground');
+  });
+});
+
+describe('processInBatches', () => {
+  it('processes all items and returns results', async () => {
+    const items = [1, 2, 3, 4, 5];
+    const results = await processInBatches(items, (item) => item * 2, {
+      yieldFn: () => Promise.resolve(),
+    });
+    expect(results).toEqual([2, 4, 6, 8, 10]);
+  });
+
+  it('yields between batches', async () => {
+    const items = Array.from({ length: 25 }, (_, i) => i);
+    const yieldSpy = { callCount: 0 };
+    const yieldFn = () => { yieldSpy.callCount++; return Promise.resolve(); };
+
+    await processInBatches(items, (item) => item, { batchSize: 10, yieldFn });
+
+    // 25 items / 10 per batch = 3 batches = 3 yields
+    expect(yieldSpy.callCount).toBe(3);
+  });
+
+  it('reports progress after each batch', async () => {
+    const items = Array.from({ length: 25 }, (_, i) => i);
+    const progressCalls = [];
+    const onProgress = (processed, total) => progressCalls.push({ processed, total });
+
+    await processInBatches(items, (item) => item, {
+      batchSize: 10,
+      yieldFn: () => Promise.resolve(),
+      onProgress,
+    });
+
+    expect(progressCalls).toEqual([
+      { processed: 10, total: 25 },
+      { processed: 20, total: 25 },
+      { processed: 25, total: 25 },
+    ]);
+  });
+
+  it('handles empty array', async () => {
+    const results = await processInBatches([], (item) => item, {
+      yieldFn: () => Promise.resolve(),
+    });
+    expect(results).toEqual([]);
+  });
+
+  it('handles fewer items than batch size', async () => {
+    const items = [1, 2, 3];
+    const yieldSpy = { callCount: 0 };
+    const yieldFn = () => { yieldSpy.callCount++; return Promise.resolve(); };
+
+    const results = await processInBatches(items, (item) => item * 10, {
+      batchSize: 10,
+      yieldFn,
+    });
+
+    expect(results).toEqual([10, 20, 30]);
+    expect(yieldSpy.callCount).toBe(1);
+  });
+
+  it('clamps progress to total on final partial batch', async () => {
+    const items = Array.from({ length: 13 }, (_, i) => i);
+    const progressCalls = [];
+    const onProgress = (processed, total) => progressCalls.push({ processed, total });
+
+    await processInBatches(items, (item) => item, {
+      batchSize: 10,
+      yieldFn: () => Promise.resolve(),
+      onProgress,
+    });
+
+    // Last batch: Math.min(20, 13) = 13, not 20
+    expect(progressCalls[progressCalls.length - 1]).toEqual({ processed: 13, total: 13 });
   });
 });
