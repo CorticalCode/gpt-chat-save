@@ -5,6 +5,14 @@ All notable changes to GPT Chat Save will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-05
+
+### Added
+- **Batch processing** - Messages processed in chunks of 10, yielding to the browser event loop between batches to prevent tab freeze on long conversations (500+ messages)
+- **Export progress indicator** - Popup shows "Exporting... N/M" during export
+- `processInBatches` utility function in `utils.js` with injectable yield and progress callbacks
+- 6 new unit tests for batch processing (70 total)
+
 ## [1.1.1] - 2026-02-05
 
 ### Fixed
