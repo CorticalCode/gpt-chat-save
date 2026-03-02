@@ -81,6 +81,9 @@ This extension is designed with security in mind:
 git clone https://github.com/CorticalCode/gpt-chat-save.git
 cd gpt-chat-save
 
+# Install Node.js via mise (optional, for running tests)
+mise install
+
 # Install dependencies (optional, for development)
 npm install
 
